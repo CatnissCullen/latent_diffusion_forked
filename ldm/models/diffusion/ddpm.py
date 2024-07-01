@@ -500,6 +500,9 @@ class LatentDiffusion(DDPM):
             self.make_cond_schedule()
 
     def instantiate_first_stage(self, config):
+        """
+        pretrained VAE
+        """
         model = instantiate_from_config(config)
         self.first_stage_model = model.eval()
         self.first_stage_model.train = disabled_train
@@ -507,6 +510,9 @@ class LatentDiffusion(DDPM):
             param.requires_grad = False
 
     def instantiate_cond_stage(self, config):
+        """
+        CLIP Encoders
+        """
         if not self.cond_stage_trainable:
             if config == "__is_first_stage__":
                 print("Using first stage also as cond stage.")
@@ -540,6 +546,13 @@ class LatentDiffusion(DDPM):
         return denoise_grid
 
     def get_first_stage_encoding(self, encoder_posterior):
+        """
+        Do Perceptual Compression on Input Image
+        :param encoder_posterior: a VAE object initialized with Input Image
+         e.g.   encoder_posterior = self.encode_first_stage(x)
+                latent_vector = self.get_first_stage_encoding(encoder_posterior).detach()
+        :return: Compressed Input
+        """
         if isinstance(encoder_posterior, DiagonalGaussianDistribution):
             z = encoder_posterior.sample()
         elif isinstance(encoder_posterior, torch.Tensor):
@@ -549,6 +562,11 @@ class LatentDiffusion(DDPM):
         return self.scale_factor * z
 
     def get_learned_conditioning(self, c):
+        """
+        Apply Image-Encoder or Text-Encoder of CLIP to Condition
+        :param c:
+        :return: Encoded Condition
+        """
         if self.cond_stage_forward is None:
             if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
                 c = self.cond_stage_model.encode(c)
